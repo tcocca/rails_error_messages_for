@@ -1,0 +1,153 @@
+ErrorMessagesFor
+================
+
+This plugin enchances the default rails functionality for the ActiveRecord helper 'error_messages_for'
+
+What it does:
+
+1. It allows you to enter an array of AR objects as the first argument and will display them all in the same output block.
+
+Example:
+
+<%= error_messages_for [:user, :topic, :item] %>
+
+With this bit of code you'll get something that looks like the following:
+
+There were 3 errors that need to be fixed:
+
+* Username can't be blank
+* Title can't be blank
+* Body can't be blank
+
+2. The second argument allows you to pass in a partial to render the errors. By default the first thing it looks for is your partial, if that's nil, it'll look for the following partial: RAILS_ROOT/app/views/application/_error_messages.rhtml If it doesn't find that it'll default to some inline text.
+
+Example:
+
+<%= error_messages_for :user, "my_errors" %>
+
+You had 2 errors fool!
+
+- Username can't be blank
+- Email can't be blank
+
+This is cool if you want to change the way errors are displayed in a pop-up vs. your main site, or you want to change them on a whole section of the site, etc...
+
+3. A method is added to all of your AR objects called, 'business_name'. 
+By default this method will return a nil value. 
+
+You could optionally set the method to return whatever you would like.
+
+If this method returns something that is not blank you will get errors in the following format
+
+Example:
+if user.business_name returns "User"
+error could be in the format:   "User Username can't be blank"
+
+item.business_name returns "Article"
+error could be: "Article Body can't be blank"
+
+This is used when generating the error messages. Here's the way a message is rendered: 
+"business_name column_name error_message". 
+
+So the following model:
+
+class Item < ActiveRecord::Base
+  validates_presence_of :body, :message => "can't be blank."
+  
+  def business_name
+  	self.class.name.titlecase
+  end
+end
+
+would produce the following error message:
+
+"Item Body can't be blank."
+
+The business_name method allows you to override the first part of the error message if your business speak doesn't match your database speak. An example would be if your business wants to call Items, Articles. In that case you would do the following:
+
+class Item < ActiveRecord::Base
+  validates_presence_of :body, :message => "can't be blank."
+  
+  def business_name
+    "Article"
+  end
+end
+
+would produce the following error message:
+
+"Article Body can't be blank."
+
+Pretty sweet, eh?
+
+4. Another thing you can do is override the entire message from start to finish. Let's say, using the last example, that the business doesn't like the message, "Article body can't be blank.", instead they want the message to be, "Oi, give us a body!!". That's easy. All you have to do is start your :message attribute with a "^".
+
+Example:                   
+
+class Item < ActiveRecord::Base
+  validates_presence_of :body, :message => "^Oi, give us a body!!"
+end
+
+would produce the following error message:
+
+"Oi, give us a body!!"
+
+5.  The last thing you can do is not display any message at all
+
+You can now pass "^nil" to the :message field and that message will not added to the display.
+
+validates_presence_of :login, :message => "^nil"
+
+Example (overly conplex for a README I know but this is why I had to add it):
+
+Say you have a user model (using restful_authentication) and you have a login field and a email field.
+Restful Authentication is build on top of the login field but you want the person to use their email address as their login.
+
+Now, in your controller you do something like: 
+
+def create
+	params[:user][:login] = params[:user][:email]
+	user = User.new(params[:user]
+end
+
+and you User model
+
+class User < ActiveRecord::Base
+	validates_presence_of :login
+	validates_presence_of :email
+end
+
+So if somebody doesn't enter the email address in the form you would get the error messages:
+
+"Login can't be blank"
+"Email can't be blank"
+
+However they get confused because there is no field for login
+
+We can now do the following:
+
+class User < ActiveRecord::Base
+	validates_presence_of :login, :message => "^nil"
+	validates_presence_of :email
+end
+
+would yield the errors:
+"Email can't be blank"
+
+If you pass :message => "^nil" to the validation then that message will not be added to the display.
+
+
+This plugin offers you great flexibility, and probably should've been done right from the start in Rails core. Hope it helps.
+
+Credits
+=======
+
+This plugin is a modified version of Mark Bates' railserrorsfor
+
+Home: http://rubyforge.org/projects/railserrorsfor/
+
+AWD: http://agilewebdevelopment.com/plugins/error_messages_for
+
+Modifications I made were:
+
+* Made the business_name method blank by default instead of set to the class name.  Let users set this as they need it manually
+* Added the "^nil" option to the plugin for messages
